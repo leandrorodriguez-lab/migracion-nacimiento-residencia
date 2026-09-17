@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Migración interprovincial en Argentina, 2017-2022</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1d2733;--soft:#5b6570;--line:#dfe3e8;--bg:#fbfbf9;--accent:#2a5d8f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 "Public Sans",Arial,sans-serif}
+main{max-width:1120px;margin:0 auto;padding:40px 24px 56px}
+h1{font:500 clamp(28px,4vw,42px)/1.15 Newsreader,Georgia,serif;margin:0 0 10px;max-width:22ch}
+.lead{color:var(--soft);max-width:68ch;margin:0 0 28px}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-bottom:18px;font-size:15px}
+.seg{display:inline-flex;border:1px solid var(--ink);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;border:0;background:transparent;color:var(--ink);padding:6px 16px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#fw{display:flex;align-items:center;gap:10px;flex:1;min-width:240px;color:var(--soft)}
+#fw input{flex:1;accent-color:var(--ink)}
+#tho{min-width:4.5em;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.axes{display:flex;justify-content:space-between;font-size:13px;color:var(--soft)}
+#chart{position:relative}
+#chart svg{display:block;width:100%;height:auto}
+#tip{position:absolute;pointer-events:none;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;font-size:14px;line-height:1.4;box-shadow:0 2px 8px rgba(29,39,51,.12);opacity:0;transition:opacity .12s;max-width:260px}
+#tip b{font-weight:600}
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;color:var(--soft);margin:16px 0 28px}
+.legend span{display:flex;align-items:center;gap:6px}
+.legend i{width:12px;height:12px;border-radius:2px;display:inline-block}
+.notes{font-size:14px;color:var(--soft);max-width:72ch;border-top:1px solid var(--line);padding-top:16px}
+.notes p{margin:0 0 8px}
+@media (prefers-reduced-motion:reduce){#tip{transition:none}}
+</style>
+</head>
+<body>
+<main>
+<h1>Quién se mudó de provincia entre 2017 y 2022</h1>
+<p class="lead">Cada banda une la provincia donde una persona vivía hace cinco años con la provincia donde vivía al momento del Censo 2022. Su ancho es proporcional a la cantidad de personas. En total, 750.405 personas cambiaron de provincia.</p>
+<div class="controls">
+  <div class="seg" role="group" aria-label="Nivel de agregación">
+    <button id="bR" aria-pressed="true">Regiones</button><button id="bP" aria-pressed="false">Provincias</button>
+  </div>
+  <label id="fw">Mostrar flujos de al menos <input type="range" id="th" min="0" max="8000" step="250" value="2000" aria-describedby="tho"> <span id="tho">2.000</span></label>
+</div>
+<div class="axes"><span>Residencia hace 5 años</span><span>Residencia en 2022</span></div>
+<div id="chart"><div id="tip" role="status"></div></div>
+<div class="legend" id="leg"></div>
+<div class="notes">
+<p>Se muestran solo las personas que cambiaron de provincia; quienes siguieron en la misma no están incluidas. En la vista por regiones, una banda que vuelve a su propia región representa mudanzas entre provincias distintas de esa región. En la vista por provincias, el tamaño de cada bloque suma solo los flujos visibles según el filtro.</p>
+<p>Regiones: Pampeana (Buenos Aires, Córdoba, Entre Ríos, La Pampa, Santa Fe), Noroeste (Catamarca, Jujuy, La Rioja, Salta, Santiago del Estero, Tucumán), Noreste (Chaco, Corrientes, Formosa, Misiones), Cuyo (Mendoza, San Juan, San Luis) y Patagonia (Chubut, Neuquén, Río Negro, Santa Cruz, Tierra del Fuego). La Ciudad de Buenos Aires se presenta sola.</p>
+<p>Fuente: Instituto Nacional de Estadística y Censos (INDEC), Censo Nacional de Población, Hogares y Viviendas 2022, población en viviendas particulares. Procesamiento con Redatam 7 (CEPAL/CELADE).</p>
+</div>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-sankey@0.12.3/dist/d3-sankey.min.js"></script>
+<script>
+const P=['Ciudad de Buenos Aires','Buenos Aires','Catamarca','Córdoba','Corrientes','Chaco','Chubut','Entre Ríos','Formosa','Jujuy','La Pampa','La Rioja','Mendoza','Misiones','Neuquén','Río Negro','Salta','San Juan','San Luis','Santa Cruz','Santa Fe','Santiago del Estero','Tucumán','Tierra del Fuego'];
+const RG=['Ciudad','Pampeana','Noroeste','Pampeana','Noreste','Noreste','Patagonia','Pampeana','Noreste','Noroeste','Pampeana','Noroeste','Cuyo','Noreste','Patagonia','Patagonia','Noroeste','Cuyo','Cuyo','Patagonia','Pampeana','Noroeste','Noroeste','Patagonia'];
+const RN=['Ciudad','Pampeana','Noroeste','Noreste','Cuyo','Patagonia'],RL={Ciudad:'Ciudad de Buenos Aires'};
+const COL=['#2a78d6','#eb6834','#1baf7a','#eda100','#e87ba4','#6250d6'],cr=r=>COL[RN.indexOf(r)];
+const M=[[0, 62676, 325, 4919, 2257, 727, 2179, 3597, 638, 892, 923, 232, 1889, 2328, 2167, 3087, 1711, 555, 1300, 848, 2433, 777, 949, 953], [39058, 0, 1400, 19356, 8782, 4209, 7146, 10368, 2955, 3012, 4245, 1054, 6560, 11149, 7891, 10317, 5157, 1909, 6923, 3216, 10705, 4606, 3657, 3978], [331, 1102, 0, 2127, 64, 47, 219, 55, 43, 99, 23, 872, 184, 53, 107, 73, 257, 78, 82, 301, 143, 319, 862, 73], [4018, 10556, 1391, 0, 956, 732, 1820, 1394, 620, 1819, 2236, 1293, 1942, 1185, 1957, 1824, 2007, 1055, 3379, 1575, 7193, 1657, 666, 1177], [2665, 9160, 32, 1673, 0, 2498, 597, 1881, 904, 165, 251, 72, 283, 3378, 442, 354, 318, 62, 137, 698, 2105, 111, 125, 388], [1357, 6899, 43, 2670, 2672, 0, 480, 411, 906, 108, 206, 50, 363, 714, 846, 487, 376, 80, 140, 575, 2443, 453, 222, 696], [2998, 6107, 226, 2852, 438, 169, 0, 420, 218, 327, 341, 125, 1056, 443, 1352, 2375, 505, 247, 232, 1369, 540, 167, 260, 258], [3345, 7569, 30, 2025, 1442, 179, 397, 0, 150, 136, 159, 64, 350, 867, 428, 431, 275, 91, 185, 360, 5707, 119, 172, 311], [1820, 6553, 59, 2335, 1212, 1025, 435, 492, 0, 312, 149, 86, 614, 469, 403, 313, 767, 265, 172, 1083, 1166, 234, 511, 492], [1388, 3025, 119, 3570, 170, 54, 361, 133, 115, 0, 87, 565, 569, 132, 352, 247, 2632, 171, 131, 527, 319, 176, 1130, 460], [1033, 3035, 17, 2663, 95, 42, 197, 140, 54, 62, 0, 34, 541, 114, 457, 591, 128, 55, 491, 99, 174, 59, 56, 35], [366, 912, 686, 1860, 31, 27, 183, 78, 17, 263, 64, 0, 390, 64, 239, 250, 409, 576, 437, 263, 141, 123, 233, 59], [1724, 4434, 173, 2417, 133, 95, 915, 365, 97, 557, 1106, 398, 0, 298, 2774, 1308, 618, 1451, 2850, 802, 685, 194, 475, 567], [2734, 11272, 33, 2054, 3452, 574, 590, 1282, 304, 141, 142, 71, 402, 0, 521, 430, 436, 86, 88, 554, 1144, 155, 184, 576], [1962, 3788, 64, 2212, 171, 98, 682, 320, 86, 183, 478, 63, 2155, 281, 0, 7077, 412, 203, 208, 265, 416, 79, 178, 71], [2455, 7137, 39, 1841, 162, 65, 1724, 253, 65, 115, 643, 71, 952, 231, 5344, 0, 216, 193, 194, 352, 421, 73, 216, 159], [3286, 6263, 347, 3782, 350, 324, 719, 477, 420, 2701, 203, 890, 1213, 387, 1494, 621, 0, 352, 185, 1202, 1028, 494, 1916, 758], [633, 1613, 77, 1494, 53, 36, 301, 96, 33, 93, 63, 699, 1535, 77, 331, 226, 134, 0, 625, 246, 189, 58, 148, 240], [686, 2354, 43, 3901, 157, 21, 145, 160, 14, 82, 412, 98, 1991, 93, 259, 149, 106, 499, 0, 87, 395, 47, 79, 76], [1603, 3928, 342, 3393, 594, 275, 2393, 569, 597, 563, 248, 364, 1157, 592, 806, 860, 1202, 405, 194, 0, 591, 241, 462, 280], [3329, 10802, 198, 11344, 1417, 1512, 660, 5008, 501, 339, 262, 210, 909, 845, 883, 845, 617, 224, 746, 456, 0, 1056, 493, 521], [982, 5401, 352, 3222, 121, 390, 305, 166, 79, 147, 127, 141, 298, 123, 299, 280, 476, 71, 124, 281, 1543, 0, 1414, 285], [1885, 4343, 1166, 1525, 98, 144, 435, 148, 56, 1358, 64, 344, 596, 149, 773, 799, 2051, 153, 119, 474, 524, 1412, 0, 700], [1196, 3920, 63, 1936, 325, 235, 335, 368, 217, 303, 67, 77, 482, 448, 241, 284, 495, 336, 138, 242, 495, 168, 418, 0]];
+const fmt=n=>Math.round(n).toLocaleString('es-AR');
+let mode='R';
+const $=id=>document.getElementById(id);
+function data(){
+  if(mode==='R'){
+    const A={};M.forEach((r,i)=>r.forEach((v,j)=>{if(v){const k=RG[i]+'|'+RG[j];A[k]=(A[k]||0)+v}}));
+    return {nodes:[...RN.map(r=>({id:'o'+r,name:RL[r]||r,reg:r})),...RN.map(r=>({id:'d'+r,name:RL[r]||r,reg:r}))],
+      links:Object.entries(A).map(([k,v])=>{const[a,b]=k.split('|');return{source:'o'+a,target:'d'+b,value:v}})};
+  }
+  const t=+$('th').value,links=[];
+  M.forEach((r,i)=>r.forEach((v,j)=>{if(v&&v>=t)links.push({source:'o'+i,target:'d'+j,value:v})}));
+  const u=new Set(links.flatMap(l=>[l.source,l.target])),nodes=[];
+  P.forEach((p,i)=>{if(u.has('o'+i))nodes.push({id:'o'+i,name:p,reg:RG[i]})});
+  P.forEach((p,i)=>{if(u.has('d'+i))nodes.push({id:'d'+i,name:p,reg:RG[i]})});
+  return {nodes,links};
+}
+function draw(){
+  $('fw').style.visibility=mode==='P'?'visible':'hidden';
+  $('bR').setAttribute('aria-pressed',mode==='R');$('bP').setAttribute('aria-pressed',mode==='P');
+  const {nodes,links}=data(),W=1100,m=mode==='R'?250:180,fs=mode==='R'?16:13;
+  const nOrig=nodes.filter(n=>n.id[0]==='o').length,H=Math.max(560,mode==='R'?620:nOrig*30+40);
+  const el=$('chart'),tip=$('tip');d3.select(el).select('svg').remove();
+  const svg=d3.select(el).insert('svg','#tip').attr('viewBox',`0 0 ${W} ${H}`).attr('role','img').attr('aria-label','Diagrama de Sankey de migración interprovincial');
+  const g=d3.sankey().nodeId(d=>d.id).nodeWidth(14).nodePadding(mode==='R'?20:9).extent([[m,6],[W-m,H-6]])
+    .nodeSort((a,b)=>RN.indexOf(a.reg)-RN.indexOf(b.reg)||b.value-a.value)({nodes:nodes.map(d=>({...d})),links:links.map(d=>({...d}))});
+  const show=(e,html)=>{tip.innerHTML=html;tip.style.opacity=1;const r=el.getBoundingClientRect();let x=e.clientX-r.left+14,y=e.clientY-r.top+14;if(x+270>r.width)x-=290;tip.style.left=x+'px';tip.style.top=y+'px'};
+  const hide=()=>{tip.style.opacity=0;L.attr('stroke-opacity',.38)};
+  const L=svg.append('g').attr('fill','none').selectAll('path').data(g.links).join('path')
+    .attr('d',d3.sankeyLinkHorizontal()).attr('stroke',d=>cr(d.source.reg)).attr('stroke-opacity',.38).attr('stroke-width',d=>Math.max(1,d.width))
+    .on('mousemove',(e,d)=>{L.attr('stroke-opacity',x=>x===d?.8:.1);show(e,`<b>${d.source.name} → ${d.target.name}</b><br>${fmt(d.value)} personas`)}).on('mouseleave',hide);
+  svg.append('g').selectAll('rect').data(g.nodes).join('rect').attr('x',d=>d.x0).attr('y',d=>d.y0).attr('width',d=>d.x1-d.x0).attr('height',d=>Math.max(1,d.y1-d.y0)).attr('fill',d=>cr(d.reg))
+    .on('mousemove',(e,d)=>{const o=d.id[0]==='o';L.attr('stroke-opacity',x=>(o?x.source===d:x.target===d)?.8:.08);show(e,`<b>${d.name}</b><br>${fmt(d.value)} personas ${o?'se fueron':'llegaron'}${mode==='P'?' (flujos visibles)':''}`)}).on('mouseleave',hide);
+  svg.append('g').selectAll('text').data(g.nodes).join('text').attr('x',d=>d.id[0]==='o'?d.x0-8:d.x1+8).attr('y',d=>(d.y0+d.y1)/2).attr('dy','0.35em')
+    .attr('text-anchor',d=>d.id[0]==='o'?'end':'start').attr('font-size',fs).attr('fill','#1d2733').attr('font-family','Public Sans, Arial, sans-serif')
+    .text(d=>mode==='R'?`${d.name} (${fmt(d.value)})`:d.name);
+}
+$('leg').innerHTML=RN.map((r,i)=>`<span><i style="background:${COL[i]}"></i>${RL[r]||r}</span>`).join('');
+$('bR').onclick=()=>{mode='R';draw()};$('bP').onclick=()=>{mode='P';draw()};
+$('th').oninput=e=>{$('tho').textContent=fmt(e.target.value);draw()};
+draw();
+</script>
+</body>
+</html>
